@@ -5,7 +5,7 @@ import random
 pygame.init()
 
 # Constants
-MIN_WIDTH, MIN_HEIGHT = 1100, 800
+MIN_WIDTH, MIN_HEIGHT = 1100, 850
 GRID_SIZE = 750
 PANEL_WIDTH = 200
 PANEL_HEIGHT = 400
@@ -38,23 +38,22 @@ pygame.display.set_caption("Flower Plot")
 font = pygame.font.Font(None, FONT_SIZE)
 clock = pygame.time.Clock()
 
-
-# Grid setup
 def get_random_coordinate(taken_coordinates):
     possible_coords = [(x, y) for x in range(-GRID_CELLS, GRID_CELLS + 1)
                        for y in range(-GRID_CELLS, GRID_CELLS + 1)
                        if (x, y) not in taken_coordinates]
     return random.choice(possible_coords) if possible_coords else None
 
-
-taken_coordinates = set()
+taken_coordinates = {}
 target_coordinate = get_random_coordinate(taken_coordinates)
 
 # Seed drag variables
 selected_seed = None
+selected_seed_index = None
 seed_x, seed_y = 0, 0
 seed_start_x, seed_start_y = 0, 0
 hover_x, hover_y = None, None
+current_seed_index = random.randint(0, 4)  # Start with a single random seed
 
 running = True
 while running:
@@ -77,6 +76,36 @@ while running:
     pygame.draw.line(screen, X_AXIS_COLOR, (grid_start_x, grid_center_y), (grid_start_x + GRID_SIZE, grid_center_y), 3)
     pygame.draw.line(screen, Y_AXIS_COLOR, (grid_center_x, grid_start_y), (grid_center_x, grid_start_y + GRID_SIZE), 3)
 
+    # Добавление стрелок на осях
+    pygame.draw.polygon(screen, X_AXIS_COLOR, [
+        (grid_start_x + GRID_SIZE + 5, grid_center_y),
+        (grid_start_x + GRID_SIZE - 10, grid_center_y - 5),
+        (grid_start_x + GRID_SIZE - 10, grid_center_y + 5)
+    ])  # X-стрелка
+
+    pygame.draw.polygon(screen, Y_AXIS_COLOR, [
+        (grid_center_x, grid_start_y - 5),
+        (grid_center_x - 5, grid_start_y + 10),
+        (grid_center_x + 5, grid_start_y + 10)
+    ])  # Y-стрелка
+
+    # Добавление чисел на осях
+    for i in range(-5, 6):
+        x_text = font.render(str(i), True, FONT_COLOR, FONT_BG_COLOR)
+        y_text = font.render(str(i), True, FONT_COLOR, FONT_BG_COLOR)
+
+        if i != 0:
+            x_pos = grid_start_x + (i + 5) * cell_size - (x_text.get_width() // 2)
+            y_pos = grid_center_y + 5
+            screen.blit(x_text, (x_pos, y_pos))  # Числа на оси X
+
+            x_pos = grid_center_x + 5
+            y_pos = grid_start_y + (5 - i) * cell_size - (y_text.get_height() // 2)
+            screen.blit(y_text, (x_pos, y_pos))  # Числа на оси Y
+        else:
+            zero_text = font.render("0", True, FONT_COLOR, FONT_BG_COLOR)
+            screen.blit(zero_text, (grid_center_x + 5, grid_center_y + 5))  # 0 в центре
+
     # Draw panel
     panel_x = grid_start_x + GRID_SIZE + PANEL_PADDING_LEFT
     panel_y = (height - PANEL_HEIGHT) // 2
@@ -91,9 +120,9 @@ while running:
     screen.blit(target_text, (panel_x + 5, panel_y + 350))
 
     # Draw occupied flowers
-    for (x, y) in taken_coordinates:
-        screen.blit(FLOWER_IMAGES[0], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
-                                       grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
+    for (x, y), flower_index in taken_coordinates.items():
+        screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
+                                                  grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
 
     # Draw hovered grid point
     if hover_x is not None and hover_y is not None:
@@ -103,7 +132,7 @@ while running:
     if selected_seed is not None:
         screen.blit(selected_seed, (seed_x, seed_y))
     else:
-        screen.blit(SEED_IMAGES[0], (panel_x + (PANEL_WIDTH - SEED_SIZE) // 2, panel_y + 100))
+        screen.blit(SEED_IMAGES[current_seed_index], (panel_x + (PANEL_WIDTH - SEED_SIZE) // 2, panel_y + 100))
 
     # Event handling
     for event in pygame.event.get():
@@ -112,7 +141,8 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if panel_x + (PANEL_WIDTH - SEED_SIZE) // 2 < event.pos[0] < panel_x + (
                     PANEL_WIDTH + SEED_SIZE) // 2 and panel_y + 100 < event.pos[1] < panel_y + 100 + SEED_SIZE:
-                selected_seed = SEED_IMAGES[0]
+                selected_seed_index = current_seed_index
+                selected_seed = SEED_IMAGES[selected_seed_index]
                 seed_x, seed_y = event.pos
                 seed_start_x, seed_start_y = seed_x, seed_y
         elif event.type == pygame.MOUSEMOTION and selected_seed is not None:
@@ -128,8 +158,9 @@ while running:
             grid_x = round((seed_x - grid_start_x) / cell_size) - 5
             grid_y = 5 - round((seed_y - grid_start_y) / cell_size)
             if (grid_x, grid_y) == target_coordinate:
-                taken_coordinates.add(target_coordinate)
+                taken_coordinates[target_coordinate] = selected_seed_index
                 target_coordinate = get_random_coordinate(taken_coordinates)
+                current_seed_index = random.randint(0, 4)  # Assign a new seed after planting
             selected_seed = None
             hover_x, hover_y = None, None
 
