@@ -47,27 +47,34 @@ def get_random_coordinate(taken_coordinates):
     return random.choice(possible_coords) if possible_coords else None
 
 
-taken_coordinates = {}
-target_coordinate = get_random_coordinate(taken_coordinates)
-selected_seed = None
-selected_seed_index = None
-seed_x, seed_y = 0, 0
-hover_x, hover_y = None, None
-current_seed_index = random.randint(0, 4)
-timer_started = False
-start_time = 0
-planted_count = 0
-error_count = 0
-
-
 def get_elapsed_time():
-    if timer_started:
+    if timer_started and not game_won:
         elapsed = int(time.time() - start_time)
         minutes = elapsed // 60
         seconds = elapsed % 60
         return f"{minutes}:{seconds:02d}"
     return "0:00"
 
+
+def reset_game():
+    global taken_coordinates, target_coordinate, selected_seed, selected_seed_index
+    global seed_x, seed_y, current_seed_index, timer_started, start_time
+    global planted_count, error_count, game_won
+
+    taken_coordinates = {}
+    target_coordinate = get_random_coordinate(taken_coordinates)
+    selected_seed = None
+    selected_seed_index = None
+    seed_x, seed_y = 0, 0
+    current_seed_index = random.randint(0, 4)
+    timer_started = False
+    start_time = 0
+    planted_count = 0
+    error_count = 0
+    game_won = False
+
+
+reset_game()
 
 running = True
 while running:
@@ -141,24 +148,31 @@ while running:
     screen.blit(planted_text, (width - 250, 60))
     screen.blit(errors_text, (width - 250, 100))
 
-    # Draw occupied flowers
+    # Draw flowers
     for (x, y), flower_index in taken_coordinates.items():
         screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
                                                   grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
 
-    # Draw seed
-    if selected_seed is not None:
-        screen.blit(selected_seed, (seed_x, seed_y))
+    if game_won:
+        win_text = font.render("Ты выиграл!", True, FONT_COLOR, FONT_BG_COLOR)
+        restart_text = font.render("Нажмите R, чтобы сыграть заново", True, FONT_COLOR, FONT_BG_COLOR)
+        screen.blit(win_text, ((width - win_text.get_width()) // 2, height // 2 - 40))
+        screen.blit(restart_text, ((width - restart_text.get_width()) // 2, height // 2 + 10))
     else:
-        screen.blit(SEED_IMAGES[current_seed_index], (panel_x + (PANEL_WIDTH - SEED_SIZE) // 2, panel_y + 100))
+        if selected_seed is not None:
+            screen.blit(selected_seed, (seed_x, seed_y))
+        else:
+            screen.blit(SEED_IMAGES[current_seed_index], (panel_x + (PANEL_WIDTH - SEED_SIZE) // 2, panel_y + 100))
 
     # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if panel_x + (PANEL_WIDTH - SEED_SIZE) // 2 < event.pos[0] < panel_x + (
-                    PANEL_WIDTH + SEED_SIZE) // 2 and panel_y + 100 < event.pos[1] < panel_y + 100 + SEED_SIZE:
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r and game_won:
+                reset_game()
+        elif event.type == pygame.MOUSEBUTTONDOWN and not game_won:
+            if panel_x < event.pos[0] < panel_x + PANEL_WIDTH and panel_y < event.pos[1] < panel_y + PANEL_HEIGHT:
                 selected_seed_index = current_seed_index
                 selected_seed = SEED_IMAGES[selected_seed_index]
                 seed_x, seed_y = event.pos
@@ -176,8 +190,7 @@ while running:
                 target_coordinate = get_random_coordinate(taken_coordinates)
                 current_seed_index = random.randint(0, 4)
                 if target_coordinate is None:
-                    running = False
-                    print("Ты выиграл!")
+                    game_won = True
             else:
                 error_count += 1
             selected_seed = None
