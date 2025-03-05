@@ -78,7 +78,11 @@ def reset_game():
 
 
 def draw_grid(grid_start_x, grid_start_y, cell_size, grid_center_x, grid_center_y):
-    """Отрисовка сетки и осей координат."""
+    """Отрисовка сетки с цветами и осей координат."""
+    for (x, y), flower_index in taken_coordinates.items():
+        screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
+                                                  grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
+
     for i in range(11):
         x = grid_start_x + i * cell_size
         y = grid_start_y + i * cell_size
@@ -194,10 +198,6 @@ while running:
     cell_size = GRID_SIZE // (GRID_CELLS * 2)
     panel_x = grid_start_x + GRID_SIZE + PANEL_PADDING_LEFT
     panel_y = (height - PANEL_HEIGHT) // 2
-
-    for (x, y), flower_index in taken_coordinates.items():
-        screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
-                                                  grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
 
     draw_grid(grid_start_x, grid_start_y, cell_size, grid_center_x, grid_center_y)
     draw_panel(panel_x, panel_y)
