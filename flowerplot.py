@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Initialize pygame
 pygame.init()
@@ -19,7 +20,7 @@ FONT_SIZE = 30
 SEED_SIZE = 50
 FLOWER_SIZE = 100
 FPS = 60
-GRID_CELLS = 5  # Grid goes from -5 to 5
+GRID_CELLS = 5
 
 # Load assets
 BACKGROUND_IMAGE = pygame.image.load("assets/background.jpg")
@@ -38,22 +39,35 @@ pygame.display.set_caption("Flower Plot")
 font = pygame.font.Font(None, FONT_SIZE)
 clock = pygame.time.Clock()
 
+
 def get_random_coordinate(taken_coordinates):
     possible_coords = [(x, y) for x in range(-GRID_CELLS, GRID_CELLS + 1)
                        for y in range(-GRID_CELLS, GRID_CELLS + 1)
                        if (x, y) not in taken_coordinates]
     return random.choice(possible_coords) if possible_coords else None
 
+
 taken_coordinates = {}
 target_coordinate = get_random_coordinate(taken_coordinates)
-
-# Seed drag variables
 selected_seed = None
 selected_seed_index = None
 seed_x, seed_y = 0, 0
-seed_start_x, seed_start_y = 0, 0
 hover_x, hover_y = None, None
-current_seed_index = random.randint(0, 4)  # Start with a single random seed
+current_seed_index = random.randint(0, 4)
+timer_started = False
+start_time = 0
+planted_count = 0
+error_count = 0
+
+
+def get_elapsed_time():
+    if timer_started:
+        elapsed = int(time.time() - start_time)
+        minutes = elapsed // 60
+        seconds = elapsed % 60
+        return f"{minutes}:{seconds:02d}"
+    return "0:00"
+
 
 running = True
 while running:
@@ -112,21 +126,25 @@ while running:
     screen.blit(PANEL_BACKGROUND, (panel_x, panel_y))
 
     # Display instruction text
-    instruction_text = font.render("Посадите семечко", True, FONT_COLOR, FONT_BG_COLOR)
-    screen.blit(instruction_text, (panel_x + 20, panel_y + 30))
+    instruction_text = font.render("Посадите семечко", True, FONT_BG_COLOR, FONT_COLOR)
+    screen.blit(instruction_text, (panel_x + 10, panel_y + 30))
 
     # Display target coordinates
-    target_text = font.render(f"Plant at: {target_coordinate}", True, FONT_COLOR, FONT_BG_COLOR)
-    screen.blit(target_text, (panel_x + 5, panel_y + 350))
+    target_text = font.render(f"в точке: {target_coordinate}", True, FONT_BG_COLOR, FONT_COLOR)
+    screen.blit(target_text, (panel_x + 30, panel_y + 350))
+
+    # Display text
+    time_text = font.render(f"Время: {get_elapsed_time()}", True, FONT_COLOR, FONT_BG_COLOR)
+    planted_text = font.render(f"Посажено: {planted_count}", True, FONT_COLOR, FONT_BG_COLOR)
+    errors_text = font.render(f"Количество ошибок: {error_count}", True, FONT_COLOR, FONT_BG_COLOR)
+    screen.blit(time_text, (width - 250, 20))
+    screen.blit(planted_text, (width - 250, 60))
+    screen.blit(errors_text, (width - 250, 100))
 
     # Draw occupied flowers
     for (x, y), flower_index in taken_coordinates.items():
         screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
                                                   grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
-
-    # Draw hovered grid point
-    if hover_x is not None and hover_y is not None:
-        pygame.draw.circle(screen, (255, 0, 0), (hover_x, hover_y), 5)
 
     # Draw seed
     if selected_seed is not None:
@@ -144,25 +162,25 @@ while running:
                 selected_seed_index = current_seed_index
                 selected_seed = SEED_IMAGES[selected_seed_index]
                 seed_x, seed_y = event.pos
-                seed_start_x, seed_start_y = seed_x, seed_y
+                if not timer_started:
+                    timer_started = True
+                    start_time = time.time()
         elif event.type == pygame.MOUSEMOTION and selected_seed is not None:
             seed_x, seed_y = event.pos
-            grid_x = round((seed_x - grid_start_x) / cell_size) - 5
-            grid_y = 5 - round((seed_y - grid_start_y) / cell_size)
-            if -5 <= grid_x <= 5 and -5 <= grid_y <= 5:
-                hover_x = grid_start_x + (grid_x + 5) * cell_size
-                hover_y = grid_start_y + (5 - grid_y) * cell_size
-            else:
-                hover_x, hover_y = None, None
         elif event.type == pygame.MOUSEBUTTONUP and selected_seed is not None:
             grid_x = round((seed_x - grid_start_x) / cell_size) - 5
             grid_y = 5 - round((seed_y - grid_start_y) / cell_size)
             if (grid_x, grid_y) == target_coordinate:
                 taken_coordinates[target_coordinate] = selected_seed_index
+                planted_count += 1
                 target_coordinate = get_random_coordinate(taken_coordinates)
-                current_seed_index = random.randint(0, 4)  # Assign a new seed after planting
+                current_seed_index = random.randint(0, 4)
+                if target_coordinate is None:
+                    running = False
+                    print("Ты выиграл!")
+            else:
+                error_count += 1
             selected_seed = None
-            hover_x, hover_y = None, None
 
     pygame.display.flip()
     clock.tick(FPS)
