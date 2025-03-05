@@ -86,6 +86,11 @@ while running:
     grid_start_y = grid_center_y - GRID_SIZE // 2
     cell_size = GRID_SIZE // (GRID_CELLS * 2)
 
+    # Draw flowers
+    for (x, y), flower_index in taken_coordinates.items():
+        screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
+                                                  grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
+
     # Draw grid
     for i in range(11):
         x = grid_start_x + i * cell_size
@@ -147,11 +152,6 @@ while running:
     screen.blit(time_text, (width - 250, 20))
     screen.blit(planted_text, (width - 250, 60))
     screen.blit(errors_text, (width - 250, 100))
-
-    # Draw flowers
-    for (x, y), flower_index in taken_coordinates.items():
-        screen.blit(FLOWER_IMAGES[flower_index], (grid_start_x + (x + 5) * cell_size - FLOWER_SIZE // 2,
-                                                  grid_start_y + (5 - y) * cell_size - FLOWER_SIZE // 2))
 
     if game_won:
         win_text = font.render("Ты выиграл!", True, FONT_COLOR, FONT_BG_COLOR)
